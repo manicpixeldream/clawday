@@ -95,14 +95,29 @@ function target() {
   return rack.find(ball => ball.x === x && ball.depth === depth);
 }
 
-function position(node, x, depth) {
-  node.style.left = x + '%';
-  node.style.top = depth + '%';
+function drawCabinet(pose = {}) {
+  cabinet.draw({ x, depth, rack, aligned: Boolean(target()), ...pose });
+}
+
+function animate(duration, draw) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    draw(1);
+    return Promise.resolve();
+  }
+  return new Promise(resolve => {
+    const start = performance.now();
+    function frame(now) {
+      const progress = Math.min(1, (now - start) / duration);
+      draw(progress);
+      if (progress < 1) requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
 }
 
 function updateAim() {
-  position($('aim'), x, depth);
-  $('aim').classList.toggle('aligned', Boolean(target()));
+  drawCabinet();
   $('aimStatus').textContent = rack.length
     ? 'Position ' + x / 10 + ', ' + depth / 10 + (target() ? ' · Capsule in range' : ' · No capsule in range')
     : 'Add tasks to load capsules.';
@@ -126,12 +141,6 @@ function renderRack(active) {
     const task = ball ? null : waiting.shift();
     return ball ?? (task ? { id: task.id, x, depth, index } : []);
   });
-  $('balls').replaceChildren(...rack.map(ball => {
-    const sprite = element('div', 'capsule', '');
-    sprite.dataset.slot = ball.index;
-    position(sprite, ball.x, ball.depth);
-    return sprite;
-  }));
   updateAim();
 }
 
@@ -201,19 +210,25 @@ async function play() {
   grabbing = true;
   $('playBtn').setAttribute('aria-disabled', 'true');
   const pick = target();
-  $('claw').classList.add('dropping');
   try {
-    await new Promise(resolve => setTimeout(resolve, 340));
-    if (pick) {
-      $('balls').querySelector('[data-slot="' + pick.index + '"]').hidden = true;
-      $('claw').classList.add('holding');
-    }
-    $('claw').classList.remove('dropping');
-    await new Promise(resolve => setTimeout(resolve, 340));
+    await animate(460, progress => drawCabinet({ height: 76 - 63 * progress }));
+    await animate(160, progress => drawCabinet({ height: 13, grip: 1 - progress }));
+    await animate(400, progress => drawCabinet({ height: 13 + 63 * progress, grip: 0, held: pick }));
     if (!pick) {
       toast('Miss! Move the target over a capsule and try again.');
       return;
     }
+    const chute = cabinet.chute;
+    const delivery = { x: chute.x, depth: chute.depth, held: pick };
+    await animate(480, progress => drawCabinet({
+      held: pick, grip: 0,
+      x: x + (chute.x - x) * progress,
+      depth: depth + (chute.depth - depth) * progress
+    }));
+    await animate(340, progress => drawCabinet({
+      ...delivery, grip: progress,
+      prize: { index: pick.index, height: 63 * (1 - progress ** 2) }
+    }));
     const capture = await change(({ tasks, meta }) => {
       const task = tasks.find(task => task.id === pick.id && !task.done);
       if (!task) return null;
@@ -232,7 +247,6 @@ async function play() {
       toast('That task was captured in another tab.');
     }
   } finally {
-    $('claw').classList.remove('dropping', 'holding');
     grabbing = false;
     render();
   }
