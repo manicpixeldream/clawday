@@ -22,7 +22,28 @@
     <main class="layout">
       <aside class="panel sidebar"><div class="side-label">your queue</div><div class="list-head"><div class="list-title">Task queue</div><button class="add" id="addBtn" aria-label="Open task setup">+</button></div><div class="tasks" id="taskList"></div><div class="progress"><div class="progress-row"><span>PLAY METER</span><span id="progressText">0 / 0</span></div><div class="bar"><i id="progressBar" style="width:0%"></i></div><div class="helper">Every ball holds one task. Grab one when you’re ready to roll.</div></div></aside>
       <section class="panel main"><div class="tip">01 / PLAYGROUND</div><div class="eyebrow">the tiny task arcade</div><h1 class="headline" id="welcome">A little game for your big list.</h1><p class="subtitle">Feed the machine. Let the claw pick what’s next.</p><div class="stats"><div class="stat"><small>in the queue</small><b id="queueCount">0</b></div><div class="stat"><small>cleared today</small><b id="doneCount">0</b></div><div class="stat"><small>points</small><b id="points">0</b></div></div><div class="retention"><div class="ret-card"><small>return streak</small><b id="streak">✦ 0 days</b><p id="dailyBonus">Complete a task today to start it.</p></div><div class="ret-card"><small>next unlock</small><b id="nextMilestone">Bronze prize</b><p id="milestoneText">3 points to go</p></div></div>
-        <div class="machine"><div class="machine-top"><span>CLAWDAY 2000</span><div class="lights"><i></i><i></i><i></i></div></div><div class="chamber"><div class="claw" id="claw"><div class="stem"></div><div class="head"></div><div class="prong left"></div><div class="prong right"></div></div><div class="balls" id="balls"></div><div class="chute">PRIZE DROP</div></div><div class="machine-foot"><div class="joystick"><span class="stick"></span> RANDOM DRAW</div><button class="play" id="playBtn">GRAB A TASK&nbsp; ↗</button></div></div>
+        <section class="machine" id="machine" aria-label="Claw machine">
+          <div class="machine-top"><span>CLAWDAY 2000</span><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div></div>
+          <div class="chamber" aria-hidden="true">
+            <div class="arena">
+              <div class="floor"></div>
+              <div id="balls"></div>
+              <div id="aim"><div class="reticle"></div><div class="lift" id="claw"><div class="gripper"><i></i></div></div></div>
+            </div>
+            <div class="chute">PRIZE DROP</div>
+          </div>
+          <div class="machine-foot">
+            <div class="dpad" role="group" aria-label="Move the claw">
+              <button type="button" data-move="up" aria-label="Move back">▲</button>
+              <button type="button" data-move="left" aria-label="Move left">◀</button>
+              <button type="button" data-move="down" aria-label="Move forward">▼</button>
+              <button type="button" data-move="right" aria-label="Move right">▶</button>
+            </div>
+            <button class="play" id="playBtn">DROP CLAW</button>
+          </div>
+          <p class="machine-hint">Use the arrows to line up the target, then drop. Space drops the claw when the machine controls have focus.</p>
+          <p class="machine-status" id="aimStatus" aria-live="polite"></p>
+        </section>
         <div class="picked empty-pick" id="picked" aria-live="polite">Your next task will appear here when you play.</div><div class="shelf"><div class="shelf-head"><strong>Prize shelf</strong><span id="shelfCount">0 / 3 unlocked</span></div><div class="trophies"><div class="trophy" id="trophy3">✦<small>3 pts</small></div><div class="trophy" id="trophy10">★<small>10 pts</small></div><div class="trophy" id="trophy25">♛<small>25 pts</small></div></div><div class="prize" id="prizeLine">Your prize: <b>set one in the setup</b></div></div>
       </section>
     </main>

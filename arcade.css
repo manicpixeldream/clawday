@@ -119,3 +119,83 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
+
+.machine .chamber {
+  height: 330px;
+  perspective: 720px;
+  background: repeating-linear-gradient(#160e28 0 3px, #1d1232 3px 6px);
+  box-shadow: inset 8px 0 #10091c, inset -8px 0 #10091c;
+}
+.arena {
+  position: absolute;
+  inset: 83px 9% 34px;
+  transform: rotateX(38deg);
+  transform-style: preserve-3d;
+}
+.floor {
+  position: absolute;
+  inset: 0;
+  border: 3px solid #775caa;
+  background-color: #30204a;
+  background-image: linear-gradient(#574078 1px, transparent 1px),
+    linear-gradient(90deg, #574078 1px, transparent 1px);
+  background-size: 10% 10%;
+  box-shadow: 0 9px #130a24;
+}
+#balls { display: contents; }
+#aim, .capsule { position: absolute; transform-style: preserve-3d; }
+#aim { width: 0; height: 0; transition: left 110ms steps(3), top 110ms steps(3); }
+.capsule, .holding .gripper::after {
+  width: 26px;
+  height: 26px;
+  clip-path: polygon(25% 0, 75% 0, 75% 12%, 88% 12%, 88% 25%, 100% 25%, 100% 75%, 88% 75%, 88% 88%, 75% 88%, 75% 100%, 25% 100%, 25% 88%, 12% 88%, 12% 75%, 0 75%, 0 25%, 12% 25%, 12% 12%, 25% 12%);
+  background: linear-gradient(#fff4c6 0 18%, #ffa0cc 18% 48%, #b04986 48% 61%, #ff78ae 61% 80%, #9e3a77 80%);
+}
+.capsule { transform: translate(-50%, -50%) translateZ(14px) rotateX(-38deg); }
+.reticle {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  transform: translate(-50%, -50%) translateZ(2px);
+  border: 3px dashed var(--yellow);
+}
+.aligned .reticle { border: 3px solid var(--mint); }
+.lift {
+  position: absolute;
+  transform: translateZ(98px);
+  transform-style: preserve-3d;
+  transition: transform 320ms steps(10);
+}
+.lift.dropping { transform: translateZ(24px); }
+.gripper {
+  position: absolute;
+  width: 34px;
+  height: 20px;
+  transform: translate(-50%, -80%) rotateX(-38deg);
+  border: 5px solid var(--yellow);
+  border-bottom: 0;
+  box-shadow: inset 0 4px #a46c36;
+}
+.gripper i {
+  position: absolute;
+  left: 10px;
+  bottom: 15px;
+  height: 30px;
+  width: 4px;
+  background: repeating-linear-gradient(#b2a1e1 0 5px, #6d5a92 5px 8px);
+}
+.holding .gripper::after { content: ''; position: absolute; left: -1px; top: 7px; }
+.chute { z-index: 2; }
+.dpad { display: grid; grid-template-columns: repeat(3, 38px); gap: 5px; }
+.dpad button {
+  min-height: 38px;
+  background: #27163f;
+  border: 2px solid #aa89d0;
+  box-shadow: 2px 2px #130a24;
+  color: var(--mint);
+}
+.dpad button:first-child { grid-column: 2; }
+.dpad button:nth-child(2) { grid-column: 1; }
+.dpad button:active { background: #5b3d79; }
+.machine-hint, .machine-status { font-size: 11px; line-height: 1.55; }
+.machine-status { color: var(--mint); margin-bottom: 0; }

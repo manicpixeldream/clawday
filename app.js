@@ -10,6 +10,11 @@ let grabbing = false;
 let saving = false;
 let toastTimer;
 let renderedDay;
+const slots = [[20, 30], [50, 30], [80, 30], [20, 70], [50, 70], [80, 70]];
+const moves = { up: [0, -10], left: [-10, 0], down: [0, 10], right: [10, 0] };
+let x = 50;
+let depth = 50;
+let rack = [];
 
 function day(date = new Date()) {
   return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
@@ -78,38 +83,71 @@ function element(tag, className, text) {
   return node;
 }
 
-function showPick(task, captured = false) {
+function showPick(task) {
   const label = element('div', '', '');
-  label.append(element('small', '', captured ? 'CAPTURED' : 'TASK PREVIEW'),
+  label.append(element('small', '', 'CAPTURED'),
     element('strong', '', task.text));
   $('picked').className = 'picked';
   $('picked').replaceChildren(element('div', 'picked-ball', ''), label);
 }
 
+function target() {
+  return rack.find(ball => ball.x === x && ball.depth === depth);
+}
+
+function position(node, x, depth) {
+  node.style.left = x + '%';
+  node.style.top = depth + '%';
+}
+
+function updateAim() {
+  position($('aim'), x, depth);
+  $('aim').classList.toggle('aligned', Boolean(target()));
+  $('aimStatus').textContent = rack.length
+    ? 'Position ' + x / 10 + ', ' + depth / 10 + (target() ? ' · Capsule in range' : ' · No capsule in range')
+    : 'Add tasks to load capsules.';
+}
+
+function move(direction) {
+  if (grabbing) return;
+  const [dx, dy] = moves[direction];
+  x = Math.max(10, Math.min(90, x + dx));
+  depth = Math.max(10, Math.min(90, depth + dy));
+  updateAim();
+}
+
+function renderRack(active) {
+  const pending = new Set(active.map(task => task.id));
+  const previous = rack.filter(ball => pending.has(ball.id));
+  const loaded = new Set(previous.map(ball => ball.id));
+  const waiting = active.filter(task => !loaded.has(task.id));
+  rack = slots.flatMap(([x, depth], index) => {
+    const ball = previous.find(ball => ball.index === index);
+    const task = ball ? null : waiting.shift();
+    return ball ?? (task ? { id: task.id, x, depth, index } : []);
+  });
+  $('balls').replaceChildren(...rack.map(ball => {
+    const sprite = element('div', 'capsule', '');
+    sprite.dataset.slot = ball.index;
+    position(sprite, ball.x, ball.depth);
+    return sprite;
+  }));
+  updateAim();
+}
+
 function render() {
   const { tasks, meta } = state;
   const today = renderedDay = day();
-  const focused = document.activeElement?.dataset.task;
   const list = $('taskList');
-  const balls = $('balls');
   list.replaceChildren();
-  balls.replaceChildren();
-  tasks.forEach(task => {
-    const row = element(task.done ? 'div' : 'button', task.done ? 'task done' : 'task', '');
+  tasks.filter(task => task.done).forEach(task => {
+    const row = element('div', 'task done', '');
     row.append(element('i', 'dot', ''), element('span', '', task.text));
     list.append(row);
-    if (task.done) return;
-    row.dataset.task = 'row-' + task.id;
-    row.onclick = () => showPick(task);
-    const ball = element('button', 'ball', '✦');
-    ball.title = task.text;
-    ball.setAttribute('aria-label', 'Preview task: ' + task.text);
-    ball.dataset.task = 'ball-' + task.id;
-    ball.onclick = row.onclick;
-    balls.append(ball);
   });
   const done = tasks.filter(task => task.done).length;
   const active = tasks.filter(task => !task.done);
+  if (!grabbing) renderRack(active);
   const next = milestones.find(points => points > meta.points);
   $('queueCount').textContent = active.length;
   $('doneCount').textContent = tasks.filter(task => task.done && task.completedOn === today).length;
@@ -125,11 +163,7 @@ function render() {
   $('progressText').textContent = done + ' / ' + tasks.length;
   $('progressBar').style.width = (tasks.length ? done / tasks.length * 100 : 0) + '%';
   $('playBtn').setAttribute('aria-disabled', String(grabbing || !active.length));
-  $('preview').replaceChildren(...(active.length
-    ? active.map(task => element('span', 'chip', task.text))
-    : [element('span', 'chip', 'No tasks yet. Add a few!')]));
-  if (focused) [...document.querySelectorAll('[data-task]')]
-    .find(node => node.dataset.task === focused)?.focus({ preventScroll: true });
+  $('preview').textContent = active.length ? active.length + ' sealed capsules' : 'No tasks yet. Add a few!';
 }
 
 function toast(message) {
@@ -163,14 +197,23 @@ async function setup(start) {
 }
 
 async function play() {
-  const active = state.tasks.filter(task => !task.done);
-  if (grabbing || !active.length) return;
+  if (grabbing || !rack.length) return;
   grabbing = true;
   $('playBtn').setAttribute('aria-disabled', 'true');
-  const pick = active[Math.floor(Math.random() * active.length)];
+  const pick = target();
   $('claw').classList.add('dropping');
   try {
-    await new Promise(resolve => setTimeout(resolve, 850));
+    await new Promise(resolve => setTimeout(resolve, 340));
+    if (pick) {
+      $('balls').querySelector('[data-slot="' + pick.index + '"]').hidden = true;
+      $('claw').classList.add('holding');
+    }
+    $('claw').classList.remove('dropping');
+    await new Promise(resolve => setTimeout(resolve, 340));
+    if (!pick) {
+      toast('Miss! Move the target over a capsule and try again.');
+      return;
+    }
     const capture = await change(({ tasks, meta }) => {
       const task = tasks.find(task => task.id === pick.id && !task.done);
       if (!task) return null;
@@ -183,13 +226,13 @@ async function play() {
       return { task, bonus };
     });
     if (capture) {
-      showPick(capture.task, true);
+      showPick(capture.task);
       toast(capture.bonus ? 'Daily bonus! +3 points' : 'Task captured · +1 point');
     } else {
       toast('That task was captured in another tab.');
     }
   } finally {
-    $('claw').classList.remove('dropping');
+    $('claw').classList.remove('dropping', 'holding');
     grabbing = false;
     render();
   }
@@ -209,6 +252,19 @@ $('taskInput').onkeydown = event => {
   if (event.key === 'Enter' && !event.isComposing) setup(false);
 };
 $('playBtn').onclick = play;
+$('machine').querySelectorAll('[data-move]').forEach(button => {
+  button.onclick = () => move(button.dataset.move);
+});
+$('machine').addEventListener('keydown', event => {
+  const direction = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[event.key];
+  if (direction) {
+    event.preventDefault();
+    move(direction);
+  } else if (event.code === 'Space') {
+    event.preventDefault();
+    if (!event.repeat) play();
+  }
+});
 window.addEventListener('storage', event => {
   if (!storageAvailable || (event.key !== KEY && event.key !== null)) return;
   try { state = readState(); render(); }
