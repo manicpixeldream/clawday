@@ -25,12 +25,7 @@
         <section class="machine" id="machine" aria-label="Claw machine">
           <div class="machine-top"><span>CLAWDAY 2000</span><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div></div>
           <div class="chamber" aria-hidden="true">
-            <div class="arena">
-              <div class="floor"></div>
-              <div id="balls"></div>
-              <div id="aim"><div class="reticle"></div><div class="lift" id="claw"><div class="gripper"><i></i></div></div></div>
-            </div>
-            <div class="chute">PRIZE DROP</div>
+            <canvas id="cabinet" width="400" height="320"></canvas>
           </div>
           <div class="machine-foot">
             <div class="dpad" role="group" aria-label="Move the claw">
@@ -51,6 +46,7 @@
   <dialog class="modal" id="modal" aria-labelledby="setupTitle"><div class="modal-card"><button class="close" id="closeBtn" aria-label="Close setup">×</button><h2 id="setupTitle">Load the machine.</h2><p>Make a list of the things bouncing around your head. We’ll save it right here on your device.</p><label class="field-label" for="prizeInput">A good thing to do when you earn a prize</label><input class="task-input" id="prizeInput" placeholder="e.g. get an oat milk latte" maxlength="80"/><label class="field-label" for="taskInput" style="margin-top:16px">Add a task</label><div class="input-row"><input class="task-input" id="taskInput" placeholder="e.g. reply to that email" maxlength="80"/><button class="ghost" id="addTaskBtn">Add</button></div><div class="saved-preview" id="preview"></div><button class="start" id="startBtn">START PLAYING →</button></div></dialog>
   <div class="celebrate"><div class="toast" id="toast" role="status"></div></div>
   <p id="storageNotice" role="status" hidden></p>
+  <script src="cabinet.js"></script>
   <script src="app.js">
   </script>
 </body>
