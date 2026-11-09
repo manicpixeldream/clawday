@@ -9,12 +9,12 @@ const cabinet = (() => {
     x -= 50;
     y -= 48;
     z -= 50;
-    const horizontal = x * .91 - z * .414;
-    const forward = x * .414 + z * .91;
-    const vertical = y * .94 - forward * .342;
-    const depth = y * .342 + forward * .94;
-    const zoom = 590 / (310 - depth);
-    return [200 + horizontal * zoom, 130 - vertical * zoom, depth];
+    const horizontal = x * .998 - z * .063;
+    const forward = x * .063 + z * .998;
+    const vertical = y * .867 - forward * .498;
+    const depth = y * .498 + forward * .867;
+    const zoom = 600 / (310 - depth);
+    return [200 + horizontal * zoom, 143 - vertical * zoom, depth];
   }
 
   function face(vertices, color) {
@@ -31,7 +31,7 @@ const cabinet = (() => {
     face([b, c, top[2], top[1]], colors[2]);
   }
 
-  const frame = ['#ff9fcb', '#aa3a7a', '#692662'];
+  const frame = ['#ff866e', '#bf3446', '#702044'];
   const rail = ['#c6b8f4', '#7868a8', '#493b77'];
   const gold = ['#fff3aa', '#eda956', '#a95840'];
   const capsuleColors = [
@@ -40,11 +40,17 @@ const cabinet = (() => {
     ['#fff2af', '#f5ae54', '#a7594d']
   ];
 
-  function capsule(x, y, z, index) {
+  function capsule(x, y, z, ball) {
+    const { size, index } = ball;
     const colors = capsuleColors[index % capsuleColors.length];
-    box(x - 4, y, z - 4, 8, 2, 8, colors);
-    box(x - 5, y + 2, z - 5, 10, 6, 10, colors);
-    box(x - 4, y + 8, z - 4, 8, 2, 8, colors);
+    const left = x - size / 2, back = z - size / 2;
+    box(left, y, back, size, size * .72, size, colors);
+    box(x - size * .28, y + size * .73, z - size * .22, size * .56, .4, size * .44,
+      ['#fff0cc', '#bfb5c8', '#a59ab1']);
+    box(left, y + size * .78, back, size, size * .22, size,
+      ['#d6f7ff44', '#a2dfff76', '#8699df76']);
+    box(left, y + size, back, size, .35, size * .12,
+      ['#e7f8ffb0', '#e7f8ff80', '#e7f8ff80']);
   }
 
   function draw({ x, depth, height = 76, grip = 1, rack, held, prize, aligned }) {
@@ -62,6 +68,12 @@ const cabinet = (() => {
       box(corner[0], 0, corner[1], 4, 96, 4, frame);
     }
     box(-2, 92, 98, 104, 7, 4, frame);
+    for (const post of [-2, 98]) {
+      for (let level = 12; level < 90; level += 13) {
+        const light = level % 2 ? '#ffcf67' : '#fff2d4';
+        box(post, level, 102, 4, 4, .8, [light, light, '#d16e58']);
+      }
+    }
     box(98, 92, 0, 4, 7, 98, frame);
     box(-2, 88, 0, 3, 3, 98, rail);
     box(98, 88, 0, 3, 3, 98, rail);
@@ -84,10 +96,10 @@ const cabinet = (() => {
     box(85, 0, 84, 15, 2, 2, gold);
     box(84, 0, 85, 2, 2, 15, gold);
     rack.forEach(ball => {
-      if (ball !== held) capsule(ball.x, 0, ball.depth, ball.index);
+      if (ball !== held) capsule(ball.x, 0, ball.depth, ball);
     });
-    if (held && !prize) capsule(x, height - 13, depth, held.index);
-    if (prize) capsule(chute.x, prize.height, chute.depth, prize.index);
+    if (held && !prize) capsule(x, height - held.size - 3, depth, held);
+    if (prize && held) capsule(prize.x, prize.height, prize.depth, held);
     faces.sort((a, b) => a.depth - b.depth).forEach(({ points, color }) => {
       ctx.beginPath();
       points.forEach(([px, py], index) => {

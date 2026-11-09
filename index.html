@@ -28,15 +28,10 @@
             <canvas id="cabinet" width="400" height="320"></canvas>
           </div>
           <div class="machine-foot">
-            <div class="dpad" role="group" aria-label="Move the claw">
-              <button type="button" data-move="up" aria-label="Move back">▲</button>
-              <button type="button" data-move="left" aria-label="Move left">◀</button>
-              <button type="button" data-move="down" aria-label="Move forward">▼</button>
-              <button type="button" data-move="right" aria-label="Move right">▶</button>
-            </div>
-            <button class="play" id="playBtn">DROP CLAW</button>
+            <button class="joystick-control" id="joystick" type="button" aria-label="Claw joystick" aria-describedby="machineHint"><span class="joystick-handle" aria-hidden="true"></span></button>
+            <button class="play" id="playBtn">GRAB</button>
           </div>
-          <p class="machine-hint">Use the arrows to line up the target, then drop. Space drops the claw when the machine controls have focus.</p>
+          <p class="machine-hint" id="machineHint">Drag the joystick or use the arrow keys to aim. Press Grab or Space to drop the claw.</p>
           <p class="machine-status" id="aimStatus" aria-live="polite"></p>
         </section>
         <div class="picked empty-pick" id="picked" aria-live="polite">Your next task will appear here when you play.</div><div class="shelf"><div class="shelf-head"><strong>Prize shelf</strong><span id="shelfCount">0 / 3 unlocked</span></div><div class="trophies"><div class="trophy" id="trophy3">✦<small>3 pts</small></div><div class="trophy" id="trophy10">★<small>10 pts</small></div><div class="trophy" id="trophy25">♛<small>25 pts</small></div></div><div class="prize" id="prizeLine">Your prize: <b>set one in the setup</b></div></div>

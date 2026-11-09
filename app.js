@@ -10,8 +10,8 @@ let grabbing = false;
 let saving = false;
 let toastTimer;
 let renderedDay;
-const slots = [[20, 30], [50, 30], [80, 30], [20, 70], [50, 70], [80, 70]];
-const moves = { up: [0, -10], left: [-10, 0], down: [0, 10], right: [10, 0] };
+const moves = { up: [0, -2], left: [-2, 0], down: [0, 2], right: [2, 0] };
+const gripFailureRate = .2;
 let x = 50;
 let depth = 50;
 let rack = [];
@@ -92,7 +92,7 @@ function showPick(task) {
 }
 
 function target() {
-  return rack.find(ball => ball.x === x && ball.depth === depth);
+  return rack.find(ball => Math.hypot(ball.x - x, ball.depth - depth) <= ball.size * .48);
 }
 
 function drawCabinet(pose = {}) {
@@ -119,28 +119,26 @@ function animate(duration, draw) {
 function updateAim() {
   drawCabinet();
   $('aimStatus').textContent = rack.length
-    ? 'Position ' + x / 10 + ', ' + depth / 10 + (target() ? ' · Capsule in range' : ' · No capsule in range')
+    ? (target() ? 'Capsule in range' : 'Move the claw over a capsule')
     : 'Add tasks to load capsules.';
 }
 
-function move(direction) {
+function move(dx, dy) {
   if (grabbing) return;
-  const [dx, dy] = moves[direction];
-  x = Math.max(10, Math.min(90, x + dx));
-  depth = Math.max(10, Math.min(90, depth + dy));
+  x = Math.max(5, Math.min(95, x + dx));
+  depth = Math.max(5, Math.min(95, depth + dy));
   updateAim();
 }
 
 function renderRack(active) {
-  const pending = new Set(active.map(task => task.id));
-  const previous = rack.filter(ball => pending.has(ball.id));
-  const loaded = new Set(previous.map(ball => ball.id));
-  const waiting = active.filter(task => !loaded.has(task.id));
-  rack = slots.flatMap(([x, depth], index) => {
-    const ball = previous.find(ball => ball.index === index);
-    const task = ball ? null : waiting.shift();
-    return ball ?? (task ? { id: task.id, x, depth, index } : []);
-  });
+  const columns = Math.max(1, Math.min(active.length, Math.ceil(Math.sqrt(active.length * 1.3))));
+  const rows = Math.max(1, Math.ceil(active.length / columns));
+  const size = Math.min(15, 72 / columns, 65 / rows);
+  rack = active.map(({ id }, index) => ({
+    id, index, size,
+    x: 7 + (index % columns + .5) * 86 / columns,
+    depth: 9 + (Math.floor(index / columns) + .5) * 73 / rows
+  }));
   updateAim();
 }
 
@@ -211,13 +209,24 @@ async function play() {
   $('playBtn').setAttribute('aria-disabled', 'true');
   const pick = target();
   try {
-    await animate(460, progress => drawCabinet({ height: 76 - 63 * progress }));
-    await animate(160, progress => drawCabinet({ height: 13, grip: 1 - progress }));
-    await animate(400, progress => drawCabinet({ height: 13 + 63 * progress, grip: 0, held: pick }));
+    const bottom = (pick?.size ?? 10) + 3;
+    await animate(460, progress => drawCabinet({ height: 76 + (bottom - 76) * progress }));
+    await animate(160, progress => drawCabinet({ height: bottom, grip: 1 - progress }));
     if (!pick) {
+      await animate(400, progress => drawCabinet({ height: bottom + (76 - bottom) * progress }));
       toast('Miss! Move the target over a capsule and try again.');
       return;
     }
+    if (Math.random() < gripFailureRate) {
+      await animate(220, progress => drawCabinet({ height: bottom + 22 * progress, grip: 0, held: pick }));
+      await animate(260, progress => drawCabinet({
+        height: bottom + 22 + (54 - bottom) * progress, held: pick,
+        prize: { x: pick.x, depth: pick.depth, height: 22 * (1 - progress ** 2) }
+      }));
+      toast('The cube slipped! Try another grab.');
+      return;
+    }
+    await animate(400, progress => drawCabinet({ height: bottom + (76 - bottom) * progress, grip: 0, held: pick }));
     const chute = cabinet.chute;
     const delivery = { x: chute.x, depth: chute.depth, held: pick };
     await animate(480, progress => drawCabinet({
@@ -227,7 +236,7 @@ async function play() {
     }));
     await animate(340, progress => drawCabinet({
       ...delivery, grip: progress,
-      prize: { index: pick.index, height: 63 * (1 - progress ** 2) }
+      prize: { ...chute, height: (76 - bottom) * (1 - progress ** 2) }
     }));
     const capture = await change(({ tasks, meta }) => {
       const task = tasks.find(task => task.id === pick.id && !task.done);
@@ -266,14 +275,53 @@ $('taskInput').onkeydown = event => {
   if (event.key === 'Enter' && !event.isComposing) setup(false);
 };
 $('playBtn').onclick = play;
-$('machine').querySelectorAll('[data-move]').forEach(button => {
-  button.onclick = () => move(button.dataset.move);
+const joystick = $('joystick');
+let pointer;
+let stickX = 0;
+let stickY = 0;
+let lastFrame;
+let steeringFrame;
+
+function steer(event) {
+  if (event.pointerId !== pointer) return;
+  const bounds = joystick.getBoundingClientRect();
+  const dx = event.clientX - bounds.left - bounds.width / 2;
+  const dy = event.clientY - bounds.top - 34;
+  const radius = Math.max(26, Math.hypot(dx, dy));
+  stickX = dx / radius;
+  stickY = dy / radius;
+  joystick.style.setProperty('--stick-x', stickX * 26 + 'px');
+  joystick.style.setProperty('--stick-y', stickY * 22 + 'px');
+}
+
+function steerFrame(now) {
+  if (pointer === undefined) return;
+  const elapsed = Math.min(32, now - (lastFrame ?? now));
+  lastFrame = now;
+  if (Math.hypot(stickX, stickY) > .15) move(stickX * elapsed * .065, stickY * elapsed * .065);
+  steeringFrame = requestAnimationFrame(steerFrame);
+}
+
+joystick.addEventListener('pointerdown', event => {
+  if (pointer !== undefined || event.button !== 0 || grabbing) return;
+  pointer = event.pointerId;
+  joystick.setPointerCapture(pointer);
+  steer(event);
+  steeringFrame = requestAnimationFrame(steerFrame);
+});
+joystick.addEventListener('pointermove', steer);
+joystick.addEventListener('lostpointercapture', event => {
+  if (event.pointerId !== pointer) return;
+  cancelAnimationFrame(steeringFrame);
+  pointer = lastFrame = undefined;
+  joystick.style.removeProperty('--stick-x');
+  joystick.style.removeProperty('--stick-y');
 });
 $('machine').addEventListener('keydown', event => {
   const direction = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[event.key];
   if (direction) {
     event.preventDefault();
-    move(direction);
+    move(...moves[direction]);
   } else if (event.code === 'Space') {
     event.preventDefault();
     if (!event.repeat) play();
